@@ -12,7 +12,7 @@ Open http://127.0.0.1:3000, edit the TOML input, and select **Convert**.
 Set the `PORT` environment variable to use another port.
 
 Node serves the demo files; conversion runs in the browser using Pyodide
-(Python compiled to WebAssembly) and the existing `demo.py` script. The first
+(Python compiled to WebAssembly) and the existing `toml_to_jsonc.py` script. The first
 load needs an internet connection to download Pyodide and `tomlkit`. Input is
 processed locally in the browser and is not sent to the Node server.
 The demo inherits the converter's limitations: for example, a top-level key
