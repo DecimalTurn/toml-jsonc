@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TOML to JSONC demo</title>
+  <style>
+    body { font: 16px system-ui, sans-serif; max-width: 70rem; margin: 2rem auto; padding: 0 1rem; }
+    .panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 1rem; }
+    label { display: block; font-weight: bold; margin-bottom: .5rem; }
+    textarea { box-sizing: border-box; width: 100%; min-height: 20rem; font: 14px monospace; padding: .75rem; }
+    button { margin: 1rem 0; padding: .5rem 1rem; }
+  </style>
+</head>
+<body>
+  <h1>TOML to JSONC</h1>
+  <p>Convert TOML in your browser using Python and WebAssembly.</p>
+  <div class="panels">
+    <div>
+      <label for="toml">TOML input</label>
+      <textarea id="toml" spellcheck="false"># Server settings
+[server]
+port = 8080 # Default HTTP port</textarea>
+    </div>
+    <div>
+      <label for="jsonc">JSONC output</label>
+      <textarea id="jsonc" spellcheck="false" readonly></textarea>
+    </div>
+  </div>
+  <button id="convert" disabled>Convert</button>
+  <p id="status" role="status" aria-live="polite">Loading Python and tomlkit…</p>
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

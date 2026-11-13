@@ -1,0 +1,7 @@
+{
+  "name": "toml-to-jsonc-demo",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  }
+}
