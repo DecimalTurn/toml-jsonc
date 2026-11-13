@@ -5,7 +5,7 @@ Convert TOML to JSONC in Node.js, with comments and key order preserved.
 This is a thin wrapper around the exact Python converter used by the
 [TOML-to-JSONC browser utility](https://toml-jsonc.decimalturn.dev). It runs
 that same `toml_to_jsonc.py` through [Pyodide](https://pyodide.org), so the output
-is byte-for-byte what the browser produces — including its known quirks.
+is byte-for-byte what the browser produces.
 
 ## Install
 
@@ -66,12 +66,6 @@ try {
 ```
 
 Passing a non-string throws a `TypeError`.
-
-## Known limitations
-
-Output is inherited unchanged from the browser utility, quirks included. For
-example, a top-level key written as `message = "hello"` is currently emitted as
-`"message "` with a trailing space.
 
 ## License
 

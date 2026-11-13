@@ -44,6 +44,24 @@ arr = [1, 2, 3]
   assert.deepEqual(JSON.parse(jsonc), { a: { b: { n: 1000, f: 1.5, b: true, arr: [1, 2, 3] } } });
 });
 
+test("does not leak whitespace from root-level keys", async () => {
+  const jsonc = await tomlToJsonc('message = "hello"\nother = 1\n');
+
+  assert.equal(jsonc, `{
+  "message": "hello",
+  "other": 1
+}`);
+});
+
+test("unwraps quoted root-level keys", async () => {
+  assert.equal(await tomlToJsonc('"my key" = 2\n'), `{
+  "my key": 2
+}`);
+  assert.equal(await tomlToJsonc("'lit key' = 3\n"), `{
+  "lit key": 3
+}`);
+});
+
 test("throws TomlJsoncError with the Python message on invalid TOML", async () => {
   await assert.rejects(
     () => tomlToJsonc("[server\nport = 8080"),

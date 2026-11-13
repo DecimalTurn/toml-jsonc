@@ -24,7 +24,10 @@ def toml_to_jsonc(toml_str):
                     inline_comment = ""
                     if hasattr(v, "trivia") and v.trivia.comment:
                         inline_comment = f" // {v.trivia.comment.lstrip('#').strip()}"
-                    block = "\n".join(pending_comments + [f'{inner_sp}{json.dumps(str(k))}: {val_str}'])
+                    # A tomlkit key stringifies to its source text, quotes and
+                    # trailing whitespace included; .key holds the bare key.
+                    key_name = getattr(k, "key", str(k).strip())
+                    block = "\n".join(pending_comments + [f'{inner_sp}{json.dumps(key_name)}: {val_str}'])
                     entries.append((block, inline_comment))
                     pending_comments = []
             
