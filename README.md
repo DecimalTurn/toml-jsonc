@@ -1,6 +1,6 @@
 # Convert TOML to JSONC with comments preserved
 
-Convert TOML files to JSONC format while preserving comments. This project provides both a browser demo and an npm package for Node.js.
+Convert TOML files to JSONC format while preserving comments. This project provides both a browser utility and an npm package for Node.js.
 
 https://toml-jsonc.decimalturn.dev
 
@@ -27,7 +27,7 @@ npm install github:decimalturn/toml-jsonc
 
 The converter file is not duplicated in version control: `npm/lib/toml_to_jsonc.py`
 is copied from the repository root by `npm/scripts/sync-python.mjs` before
-`test` and `pack`, so the demo and the package always share one source.
+`test` and `pack`, so the utility and the package always share one source.
 
 
 ## Development
@@ -41,7 +41,7 @@ npm start
 Open http://127.0.0.1:3000, edit the TOML input, and select **Convert**.
 Set the `PORT` environment variable to use another port.
 
-Node serves the demo files; conversion runs in the browser using Pyodide
+Node serves the html files; conversion runs in the browser using Pyodide
 (Python compiled to WebAssembly) and the existing `toml_to_jsonc.py` script. The first
 load needs an internet connection to download Pyodide and `tomlkit`. Input is
 processed locally in the browser and is not sent to the Node server.

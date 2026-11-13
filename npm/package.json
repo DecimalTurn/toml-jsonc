@@ -1,7 +1,7 @@
 {
   "name": "toml-to-jsonc",
   "version": "0.1.0",
-  "description": "Convert TOML to JSONC with comments preserved, using the same Python converter as the TOML-to-JSONC browser demo.",
+  "description": "Convert TOML to JSONC with comments preserved, using the same Python converter as the TOML-to-JSONC browser utility.",
   "type": "module",
   "main": "./index.js",
   "types": "./index.d.ts",

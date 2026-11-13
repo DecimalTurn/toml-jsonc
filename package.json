@@ -1,5 +1,5 @@
 {
-  "name": "toml-to-jsonc-demo",
+  "name": "toml-to-jsonc",
   "private": true,
   "scripts": {
     "start": "node server.js"

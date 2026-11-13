@@ -3,32 +3,460 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>TOML to JSONC demo</title>
+  <title>TOML to JSONC</title>
+  <meta name="description" content="Convert TOML to JSONC in your browser using Python and WebAssembly.">
+  <script>
+    // Apply the saved theme before the first paint so the page does not flash.
+    try {
+      const savedTheme = localStorage.getItem("toml-jsonc-theme");
+      if (savedTheme === "light" || savedTheme === "dark") {
+        document.documentElement.dataset.theme = savedTheme;
+      }
+    } catch {
+      // The toggle still works when storage is unavailable.
+    }
+  </script>
   <style>
-    body { font: 16px system-ui, sans-serif; max-width: 70rem; margin: 2rem auto; padding: 0 1rem; }
-    .panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 1rem; }
-    label { display: block; font-weight: bold; margin-bottom: .5rem; }
-    textarea { box-sizing: border-box; width: 100%; min-height: 20rem; font: 14px monospace; padding: .75rem; }
-    button { margin: 1rem 0; padding: .5rem 1rem; }
+    :root {
+      color-scheme: light;
+      --page-background: #f5f7f5;
+      --page-foreground: #1d211f;
+      --surface-background: #ffffff;
+      --control-background: #f8f9f7;
+      --border-color: #d8dcd9;
+      --muted-foreground: #5a625d;
+      --accent-color: #245b57;
+      --accent-hover: #1b4a46;
+      --accent-foreground: #ffffff;
+      --danger-color: #a12622;
+      --success-color: #2f7d52;
+      --focus-ring: rgba(36, 91, 87, .3);
+      --shadow: 0 1px 2px rgba(16, 24, 20, .05), 0 16px 40px rgba(16, 24, 20, .07);
+      --radius: 10px;
+    }
+
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --page-background: #141715;
+      --page-foreground: #eceeeb;
+      --surface-background: #1e2320;
+      --control-background: #181c1a;
+      --border-color: #39413c;
+      --muted-foreground: #a8b1ab;
+      --accent-color: #7cc4b8;
+      --accent-hover: #96d2c7;
+      --accent-foreground: #10201d;
+      --danger-color: #ff9b91;
+      --success-color: #7ddba0;
+      --focus-ring: rgba(124, 196, 184, .4);
+      --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 20px 48px rgba(0, 0, 0, .35);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme]) {
+        color-scheme: dark;
+        --page-background: #141715;
+        --page-foreground: #eceeeb;
+        --surface-background: #1e2320;
+        --control-background: #181c1a;
+        --border-color: #39413c;
+        --muted-foreground: #a8b1ab;
+        --accent-color: #7cc4b8;
+        --accent-hover: #96d2c7;
+        --accent-foreground: #10201d;
+        --danger-color: #ff9b91;
+        --success-color: #7ddba0;
+        --focus-ring: rgba(124, 196, 184, .4);
+        --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 20px 48px rgba(0, 0, 0, .35);
+      }
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: clamp(1.75rem, 5vw, 3.5rem) clamp(1rem, 4vw, 2rem) 2rem;
+      background: var(--page-background);
+      color: var(--page-foreground);
+      font: 16px/1.55 "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    a {
+      color: var(--accent-color);
+    }
+
+    .page {
+      width: min(100%, 72rem);
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .controls {
+      position: fixed;
+      z-index: 10;
+      top: 16px;
+      right: 16px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .control-button {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--surface-background);
+      color: var(--page-foreground);
+      cursor: pointer;
+      transition: color .15s ease, border-color .15s ease, background-color .15s ease;
+    }
+
+    .control-button:hover {
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+    }
+
+    .control-button:focus-visible {
+      outline: 2px solid var(--accent-color);
+      outline-offset: 2px;
+    }
+
+    .icon {
+      width: 22px;
+      height: 22px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.7;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .github-link .icon {
+      fill: currentColor;
+      stroke: none;
+    }
+
+    .theme-toggle .icon-sun,
+    .theme-toggle .icon-moon {
+      display: none;
+    }
+
+    .theme-toggle[data-action="light"] .icon-sun,
+    .theme-toggle[data-action="dark"] .icon-moon {
+      display: block;
+    }
+
+    .site-header {
+      margin-bottom: clamp(1.5rem, 3vw, 2.25rem);
+    }
+
+    .eyebrow {
+      margin: 0 0 .35rem;
+      font-size: .78rem;
+      font-weight: 600;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+      color: var(--accent-color);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.85rem, 3.4vw, 2.5rem);
+      font-weight: 650;
+      line-height: 1.15;
+      letter-spacing: -.01em;
+    }
+
+    .lede {
+      margin: .6rem 0 0;
+      max-width: 46rem;
+      color: var(--muted-foreground);
+    }
+
+    .card {
+      display: flex;
+      flex-direction: column;
+      gap: 1.15rem;
+      padding: clamp(1rem, 2.2vw, 1.5rem);
+      background: var(--surface-background);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .panels {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+      gap: 1rem;
+    }
+
+    .panel {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+      min-width: 0;
+    }
+
+    .panel > label {
+      font-size: .8rem;
+      font-weight: 600;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      color: var(--muted-foreground);
+      text-align: center;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: clamp(17rem, 40vh, 26rem);
+      padding: .85rem 1rem;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--control-background);
+      color: inherit;
+      font: .9rem/1.6 ui-monospace, "Cascadia Code", Consolas, Menlo, monospace;
+      tab-size: 2;
+      resize: vertical;
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px var(--focus-ring);
+    }
+
+    #jsonc {
+      padding-bottom: 2.9rem;
+    }
+
+    .copy-button {
+      position: absolute;
+      right: 1.1rem;
+      bottom: 1.1rem;
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      padding: .35rem .7rem;
+      border: 1px solid var(--border-color);
+      border-radius: 999px;
+      background: var(--surface-background);
+      color: var(--muted-foreground);
+      font: 500 .78rem/1 "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(16, 24, 20, .18);
+      transition: color .15s ease, border-color .15s ease, background-color .15s ease, opacity .15s ease;
+    }
+
+    .copy-button .icon {
+      width: 14px;
+      height: 14px;
+    }
+
+    .copy-button:hover:not(:disabled) {
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+    }
+
+    .copy-button:focus-visible {
+      outline: 2px solid var(--accent-color);
+      outline-offset: 2px;
+    }
+
+    .copy-button:disabled {
+      cursor: default;
+      opacity: .45;
+    }
+
+    .copy-button[data-copied="true"] {
+      border-color: currentColor;
+      color: var(--success-color);
+    }
+
+    .copy-button .icon-check,
+    .copy-button[data-copied="true"] .icon-copy {
+      display: none;
+    }
+
+    .copy-button[data-copied="true"] .icon-check {
+      display: block;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .65rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border-color);
+    }
+
+    #convert {
+      padding: .62rem 1.4rem;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: var(--accent-color);
+      color: var(--accent-foreground);
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color .15s ease, transform .15s ease;
+    }
+
+    #convert:hover:not(:disabled) {
+      background: var(--accent-hover);
+    }
+
+    #convert:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    #convert:disabled {
+      cursor: progress;
+      opacity: .65;
+    }
+
+    #convert:focus-visible {
+      outline: 2px solid var(--accent-color);
+      outline-offset: 3px;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      margin: 0;
+      font-size: .9rem;
+      color: var(--muted-foreground);
+      overflow-wrap: anywhere;
+      text-align: center;
+    }
+
+    .status::before {
+      content: "";
+      flex: none;
+      width: .55rem;
+      height: .55rem;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .status[data-state="loading"]::before {
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+
+    .status[data-state="ready"] {
+      color: var(--success-color);
+    }
+
+    .status[data-state="error"] {
+      color: var(--danger-color);
+    }
+
+    @keyframes pulse {
+      50% {
+        opacity: .25;
+      }
+    }
+
+    .site-footer {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .35rem;
+      margin-top: auto;
+      padding-top: 2rem;
+      font-size: .85rem;
+      color: var(--muted-foreground);
+    }
+
+    @media (max-width: 40rem) {
+      .site-header {
+        padding-right: 6.5rem;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
   </style>
 </head>
 <body>
-  <h1>TOML to JSONC</h1>
-  <p>Convert TOML in your browser using Python and WebAssembly.</p>
-  <div class="panels">
-    <div>
-      <label for="toml">TOML input</label>
-      <textarea id="toml" spellcheck="false"># Server settings
+  <div class="controls">
+    <a class="control-button github-link" href="https://github.com/DecimalTurn/toml-jsonc" target="_blank" rel="noopener noreferrer" aria-label="View the source on GitHub" title="View the source on GitHub">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M12 .5C5.73.5.5 5.73.5 12a11.5 11.5 0 0 0 7.86 10.92c.58.1.79-.25.79-.55v-1.94c-3.2.7-3.88-1.54-3.88-1.54-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.56-.29-5.25-1.28-5.25-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.43-2.7 5.4-5.27 5.69.41.36.78 1.06.78 2.14v3.17c0 .3.21.66.8.55A11.5 11.5 0 0 0 23.5 12C23.5 5.73 18.27.5 12 .5Z" />
+      </svg>
+    </a>
+    <button class="control-button theme-toggle" type="button" aria-label="Switch to dark mode" aria-pressed="false" title="Switch to dark mode">
+      <svg class="icon icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <circle cx="12" cy="12" r="4.2" />
+        <path d="M12 2.2v2.1M12 19.7v2.1M2.2 12h2.1M19.7 12h2.1M5.1 5.1l1.5 1.5M17.4 17.4l1.5 1.5M18.9 5.1l-1.5 1.5M6.6 17.4l-1.5 1.5" />
+      </svg>
+      <svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />
+      </svg>
+    </button>
+  </div>
+
+  <div class="page">
+    <header class="site-header">
+      <h1>TOML to JSONC</h1>
+      <p class="lede">Convert TOML to JSONC right in your tab using Python compiled to WebAssembly. Comments are preserved and nothing you type leaves your device.</p>
+    </header>
+
+    <main class="card">
+      <div class="panels">
+        <div class="panel">
+          <label for="toml">TOML</label>
+          <textarea id="toml" spellcheck="false" autocapitalize="off" autocomplete="off"># Server settings
 [server]
 port = 8080 # Default HTTP port</textarea>
-    </div>
-    <div>
-      <label for="jsonc">JSONC output</label>
-      <textarea id="jsonc" spellcheck="false" readonly></textarea>
-    </div>
+        </div>
+        <div class="panel">
+          <label for="jsonc">JSONC</label>
+          <textarea id="jsonc" spellcheck="false" readonly aria-describedby="status"></textarea>
+          <button id="copy" class="copy-button" type="button" disabled>
+            <svg class="icon icon-copy" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <rect x="9" y="9" width="13" height="13" rx="2" />
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+            </svg>
+            <svg class="icon icon-check" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M4 12.5 9 17.5 20 6.5" />
+            </svg>
+            <span class="copy-label">Copy</span>
+          </button>
+        </div>
+      </div>
+      <div class="toolbar">
+        <button id="convert" type="button" disabled>Convert</button>
+        <p id="status" class="status" role="status" aria-live="polite" data-state="loading">Loading Python and tomlkit…</p>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <span>Runs locally with <a href="https://pyodide.org/" target="_blank" rel="noopener noreferrer">Pyodide</a> and <a href="https://github.com/python-poetry/tomlkit" target="_blank" rel="noopener noreferrer">tomlkit</a>.</span>
+    </footer>
   </div>
-  <button id="convert" disabled>Convert</button>
-  <p id="status" role="status" aria-live="polite">Loading Python and tomlkit…</p>
+
   <script src="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.js"></script>
   <script src="./app.js"></script>
 </body>

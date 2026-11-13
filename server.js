@@ -28,5 +28,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(process.env.PORT || 3000, "127.0.0.1", () => {
-  console.log(`Demo running at http://127.0.0.1:${server.address().port}`);
+  console.log(`Utility running at http://127.0.0.1:${server.address().port}`);
 });
