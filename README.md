@@ -1,6 +1,36 @@
-# TOML-to-JSONC
+# Convert TOML to JSONC with comments preserved
 
-## Browser demo
+Convert TOML files to JSONC format while preserving comments. This project provides both a browser demo and an npm package for Node.js.
+
+https://toml-jsonc.decimalturn.dev
+
+## npm package
+
+`npm/` contains a Node wrapper, `toml-to-jsonc`, that runs the same
+`toml_to_jsonc.py` through Pyodide. Build it, test it or pack it from that
+folder:
+
+```sh
+cd npm
+npm install
+npm test
+npm pack
+```
+
+Can also be used from another Node.js project by installing the `toml-to-jsonc` package and importing it from the GitHub URL.
+
+```sh
+npm install github:decimalturn/toml-jsonc
+```
+
+-----
+
+The converter file is not duplicated in version control: `npm/lib/toml_to_jsonc.py`
+is copied from the repository root by `npm/scripts/sync-python.mjs` before
+`test` and `pack`, so the demo and the package always share one source.
+
+
+## Development
 
 With Node.js 18 or newer installed, run:
 
@@ -15,17 +45,3 @@ Node serves the demo files; conversion runs in the browser using Pyodide
 (Python compiled to WebAssembly) and the existing `toml_to_jsonc.py` script. The first
 load needs an internet connection to download Pyodide and `tomlkit`. Input is
 processed locally in the browser and is not sent to the Node server.
-The demo inherits the converter's limitations: for example, a top-level key
-written as `message = "hello"` is currently output as `"message "` with a
-trailing space.
-
-## GitHub Pages
-
-To publish the demo, enable **Settings → Pages → Build and deployment →
-Source: GitHub Actions** in the repository. Push these files to `main` or run
-the **Deploy demo to GitHub Pages** workflow manually. Once deployment
-completes, the site is available at
-https://decimalturn.github.io/TOML-to-JSONC/.
-
-GitHub Pages serves the static files directly; Node is only needed for the
-local demo.

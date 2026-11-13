@@ -1,0 +1,43 @@
+{
+  "name": "toml-to-jsonc",
+  "version": "0.1.0",
+  "description": "Convert TOML to JSONC with comments preserved, using the same Python converter as the TOML-to-JSONC browser demo.",
+  "type": "module",
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    }
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "lib/",
+    "vendor/"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "sync": "node scripts/sync-python.mjs",
+    "prepare": "node scripts/sync-python.mjs",
+    "pretest": "node scripts/sync-python.mjs",
+    "test": "node --test",
+    "prepack": "node scripts/sync-python.mjs"
+  },
+  "dependencies": {
+    "pyodide": "^314.0.7"
+  },
+  "keywords": [
+    "toml",
+    "jsonc",
+    "json",
+    "convert",
+    "converter",
+    "comments",
+    "pyodide"
+  ],
+  "license": "UNLICENSED"
+}
