@@ -1,12 +1,15 @@
 import { copyFile, mkdir } from "node:fs/promises";
-import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-// The converter lives at the repository root so the browser utility, server.js,
-// the GitHub Pages workflow and this package all share one copy. Copy it into
-// the package at pack time instead of duplicating it in version control.
-const source = fileURLToPath(new URL("../../toml_to_jsonc.py", import.meta.url));
-const target = fileURLToPath(new URL("../lib/toml_to_jsonc.py", import.meta.url));
+// The converters live at the repository root so the browser utility, server.js,
+// the GitHub Pages workflow and this package all share one copy. Copy them into
+// the package at pack time instead of duplicating them in version control.
+const names = ["toml_to_jsonc.py", "jsonc_to_toml.py"];
 
-await mkdir(dirname(target), { recursive: true });
-await copyFile(source, target);
+await mkdir(fileURLToPath(new URL("../lib/", import.meta.url)), { recursive: true });
+for (const name of names) {
+  await copyFile(
+    fileURLToPath(new URL(`../../${name}`, import.meta.url)),
+    fileURLToPath(new URL(`../lib/${name}`, import.meta.url)),
+  );
+}

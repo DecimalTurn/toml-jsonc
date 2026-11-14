@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { tomlToJsonc, TomlJsoncError, warmup } from "../index.js";
+import { tomlToJsonc, jsoncToToml, ConversionError, TomlJsoncError, warmup } from "../index.js";
 
 test("converts a basic document and keeps inline comments", async () => {
   const jsonc = await tomlToJsonc(`# Server settings
@@ -62,16 +62,20 @@ test("unwraps quoted root-level keys", async () => {
 }`);
 });
 
-test("throws TomlJsoncError with the Python message on invalid TOML", async () => {
+test("throws ConversionError with the Python message on invalid TOML", async () => {
   await assert.rejects(
     () => tomlToJsonc("[server\nport = 8080"),
     (error) => {
-      assert.ok(error instanceof TomlJsoncError);
+      assert.ok(error instanceof ConversionError);
       assert.match(error.message, /Unexpected character/);
       assert.match(error.type, /UnexpectedCharError$/);
       return true;
     },
   );
+});
+
+test("TomlJsoncError remains an alias of ConversionError", () => {
+  assert.equal(TomlJsoncError, ConversionError);
 });
 
 test("rejects non-string input", async () => {

@@ -2,17 +2,23 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { loadPyodide } from "pyodide";
 
-const PYTHON_SOURCE = fileURLToPath(new URL("./lib/toml_to_jsonc.py", import.meta.url));
+const PYTHON_SOURCES = [
+  ["toml_to_jsonc.py", "toml_to_jsonc"],
+  ["jsonc_to_toml.py", "jsonc_to_toml"],
+];
 const TOMLKIT_WHEEL = fileURLToPath(new URL("./vendor/tomlkit-0.13.3-py3-none-any.whl", import.meta.url));
 
-/** Thrown when the TOML input cannot be converted. */
-export class TomlJsoncError extends Error {
+/** Thrown when the input cannot be converted. */
+export class ConversionError extends Error {
   constructor(message, { cause, type } = {}) {
     super(message, { cause });
-    this.name = "TomlJsoncError";
+    this.name = "ConversionError";
     if (type) this.type = type;
   }
 }
+
+/** Backwards-compatible alias for {@link ConversionError}. */
+export const TomlJsoncError = ConversionError;
 
 async function createConverter() {
   const pyodide = await loadPyodide();
@@ -28,18 +34,27 @@ zipfile.ZipFile("/tmp/tomlkit.whl").extractall("/pkgs")
 sys.path.insert(0, "/pkgs")
 `);
 
-  // The converter ends with a sample conversion that prints on execution.
-  // Keep it from leaking into the host's stdout.
-  pyodide.globals.set("__toml_jsonc_source__", await readFile(PYTHON_SOURCE, "utf8"));
-  pyodide.runPython(`
+  for (const [file, name] of PYTHON_SOURCES) {
+    // toml_to_jsonc.py ends with a sample conversion that prints on execution.
+    // Keep it from leaking into the host's stdout.
+    pyodide.globals.set("__source__", await readFile(new URL(`./lib/${file}`, import.meta.url), "utf8"));
+    pyodide.globals.set("__filename__", file);
+    pyodide.runPython(`
 import contextlib, io
 
-__toml_jsonc_stdout__ = io.StringIO()
-with contextlib.redirect_stdout(__toml_jsonc_stdout__):
-    exec(compile(__toml_jsonc_source__, "toml_to_jsonc.py", "exec"), globals())
+__stdout__ = io.StringIO()
+with contextlib.redirect_stdout(__stdout__):
+    exec(compile(__source__, __filename__, "exec"), globals())
 `);
+    if (!pyodide.globals.has(name)) {
+      throw new Error(`Python module ${file} did not define ${name}()`);
+    }
+  }
 
-  return pyodide.globals.get("toml_to_jsonc");
+  return {
+    tomlToJsonc: pyodide.globals.get("toml_to_jsonc"),
+    jsoncToToml: pyodide.globals.get("jsonc_to_toml"),
+  };
 }
 
 let converter;
@@ -57,12 +72,12 @@ function getConverter() {
   return converter;
 }
 
-function toTomlJsoncError(error) {
+function toConversionError(error, target) {
   const traceback = typeof error?.message === "string" ? error.message : String(error);
   const lastLine = traceback.trimEnd().split("\n").pop() ?? "";
   const match = /^([\w.]+(?:Error|Exception)):\s*([\s\S]*)$/.exec(lastLine);
   const detail = (match ? match[2] : lastLine).trim();
-  return new TomlJsoncError(`Could not convert TOML: ${detail}`, {
+  return new ConversionError(`Could not convert to ${target}: ${detail}`, {
     cause: error,
     type: match ? match[1] : undefined,
   });
@@ -78,12 +93,31 @@ export async function tomlToJsonc(toml) {
     throw new TypeError(`Expected the TOML input to be a string, received ${toml === null ? "null" : typeof toml}`);
   }
 
-  const convert = await getConverter();
+  const { tomlToJsonc: convert } = await getConverter();
 
   try {
     return convert(toml);
   } catch (error) {
-    throw toTomlJsoncError(error);
+    throw toConversionError(error, "JSONC");
+  }
+}
+
+/**
+ * Convert a JSONC document to TOML, preserving comments.
+ * @param {string} jsonc
+ * @returns {Promise<string>}
+ */
+export async function jsoncToToml(jsonc) {
+  if (typeof jsonc !== "string") {
+    throw new TypeError(`Expected the JSONC input to be a string, received ${jsonc === null ? "null" : typeof jsonc}`);
+  }
+
+  const { jsoncToToml: convert } = await getConverter();
+
+  try {
+    return convert(jsonc);
+  } catch (error) {
+    throw toConversionError(error, "TOML");
   }
 }
 

@@ -6,6 +6,7 @@ const files = {
   "/": ["index.html", "text/html; charset=utf-8"],
   "/app.js": ["app.js", "text/javascript; charset=utf-8"],
   "/toml_to_jsonc.py": ["toml_to_jsonc.py", "text/plain; charset=utf-8"],
+  "/jsonc_to_toml.py": ["jsonc_to_toml.py", "text/plain; charset=utf-8"],
 };
 
 const server = http.createServer(async (req, res) => {

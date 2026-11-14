@@ -1,13 +1,14 @@
-# Convert TOML to JSONC with comments preserved
+# Convert between TOML and JSONC with comments preserved
 
-Convert TOML files to JSONC format while preserving comments. This project provides both a browser utility and an npm package for Node.js.
+Convert between TOML and JSONC while preserving comments, in either direction. This project provides both a browser utility and an npm package for Node.js.
 
 https://toml-jsonc.decimalturn.dev
 
 ## npm package
 
 `npm/` contains a Node wrapper, `toml-to-jsonc`, that runs the same
-`toml_to_jsonc.py` through Pyodide. Build it, test it or pack it from that
+`toml_to_jsonc.py` and `jsonc_to_toml.py` through Pyodide. It exposes
+`tomlToJsonc()` and `jsoncToToml()`. Build it, test it or pack it from that
 folder:
 
 ```sh
@@ -25,9 +26,10 @@ npm install github:decimalturn/toml-jsonc
 
 -----
 
-The converter file is not duplicated in version control: `npm/lib/toml_to_jsonc.py`
-is copied from the repository root by `npm/scripts/sync-python.mjs` before
-`test` and `pack`, so the utility and the package always share one source.
+The converter files are not duplicated in version control: `npm/lib/toml_to_jsonc.py`
+and `npm/lib/jsonc_to_toml.py` are copied from the repository root by
+`npm/scripts/sync-python.mjs` before `test` and `pack`, so the utility and the
+package always share one source.
 
 
 ## Development
@@ -42,6 +44,10 @@ Open http://127.0.0.1:3000, edit the TOML input, and select **Convert**.
 Set the `PORT` environment variable to use another port.
 
 Node serves the html files; conversion runs in the browser using Pyodide
-(Python compiled to WebAssembly) and the existing `toml_to_jsonc.py` script. The first
-load needs an internet connection to download Pyodide and `tomlkit`. Input is
-processed locally in the browser and is not sent to the Node server.
+(Python compiled to WebAssembly) and the existing `toml_to_jsonc.py` and
+`jsonc_to_toml.py` scripts. The first load needs an internet connection to
+download Pyodide and `tomlkit`. Input is processed locally in the browser and
+is not sent to the Node server.
+
+Use **Swap** to flip the direction: the panes trade contents and the labels
+follow, so JSONC becomes the input and TOML the output.
